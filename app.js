@@ -46,26 +46,35 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // 途中経過と確定結果を振り分け
     recog.onresult = (ev) => {
-      let interim = '';
-      for (let i = ev.resultIndex; i < ev.results.length; i++) {
-        const res  = ev.results[i];
-        const text = (res[0] && res[0].transcript) ? res[0].transcript.trim() : '';
-        if (!text) continue;
+    let finalTexts = [];
+    let interimText = '';
 
-        if (res.isFinal) {
-          const div = document.createElement('div');
-          div.innerHTML = `<strong>User:</strong> ${text}`;
-          chat.appendChild(div);
-          chat.scrollTop = chat.scrollHeight;
-          if (partial) partial.textContent = '';
-          log('onresult final: ' + text);
-        } else {
-          interim += text + ' ';
-        }
-      }
-      if (partial) partial.textContent = interim;
-    };
+    for (let i = ev.resultIndex; i < ev.results.length; i++) {
+      const res = ev.results[i];
+      const txt = res[0]?.transcript?.trim() || '';
+    if (!txt) continue;
 
+    if (res.isFinal) {
+      finalTexts.push(txt);
+    } else {
+      interimText += txt + ' ';
+    }
+  }
+
+  // 途中経過を常に表示
+  if (partialEl) partialEl.textContent = interimText;
+
+  // 確定はチャット欄へ。積んだら途中経過はクリア
+  if (finalTexts.length && chatLog) {
+    finalTexts.forEach(t => {
+      const div = document.createElement('div');
+      div.innerHTML = `<strong>User:</strong> ${t}`;
+      chatLog.appendChild(div);
+    });
+    chatLog.scrollTop = chatLog.scrollHeight;
+    if (partialEl) partialEl.textContent = '';
+  }
+};
     recog.onerror = (e) => {
       log('音声認識エラー: ' + e.error);
       // 無音で切れたとき等は録音中なら自動再開
