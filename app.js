@@ -1,110 +1,140 @@
+// app.js ーー 全文置き換え
 window.addEventListener('DOMContentLoaded', () => {
-  // ---- utilities & DOM ----
+  // ---- utils & DOM ----
+  const $ = (id) => document.getElementById(id);
   const log = (m) => {
     console.log(m);
-    const el = document.getElementById('log');
+    const el = $('log');
     if (el) {
       el.textContent += (typeof m === 'string' ? m : JSON.stringify(m)) + '\n';
       el.scrollTop = el.scrollHeight;
     }
   };
 
-  const startBtn = document.getElementById('startBtn');
-  const stopBtn  = document.getElementById('stopBtn');
-  const audio    = document.getElementById('audioPlayer');
-  const chatLog  = document.getElementById('chat');    // ← 確定表示用
-  const partialEl= document.getElementById('partial'); // ← 途中経過表示
-  const srStatus = document.getElementById('srStatus');
+  const startBtn  = $('startBtn');
+  const stopBtn   = $('stopBtn');
+  const audio     = $('audioPlayer');
+  const chat      = $('chat');      // 確定結果の表示先（※ id は1つだけ）
+  const partial   = $('partial');   // 途中経過の表示先（任意）
+  const srStatus  = $('srStatus');  // 認識状態表示（任意）
 
-if (!startBtn || !stopBtn || !audio || !chatLog) {
-  alert('必要なDOMが足りません（startBtn/stopBtn/audioPlayer/chat）');
-  return;
-}
-}
+  if (!startBtn || !stopBtn || !audio || !chat) {
+    alert('必要なDOMが足りません（startBtn / stopBtn / audioPlayer / chat）');
+    return;
+  }
 
-  // ---- recording ----
+  // ---- recording state ----
   let mediaRecorder = null;
   let chunks = [];
-  let stream = null;  
-  let recording = false;
+  let stream = null;
 
-  // --- SpeechRecognition（音声認識：リアルタイム表示） ---
-const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-if (!SR) {
-  log('⚠️ このブラウザは Web Speech API (SpeechRecognition) 非対応の可能性があります。');
-} else {
-  const recog = new SR();
-  recog.lang = 'ja-JP';
-  recog.continuous = true;       // 継続認識
-  recog.interimResults = true;   // 中間結果オン
+  // ---- SpeechRecognition ----
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recog = null;
 
-  const safeSet = (el, txt) => { if (el) el.textContent = txt; };
+  if (!SR) {
+    log('⚠️ このブラウザは Web Speech API (SpeechRecognition) 非対応の可能性があります。');
+  } else {
+    recog = new SR();
+    recog.lang = 'ja-JP';
+    recog.continuous = true;     // 継続認識
+    recog.interimResults = true; // 途中経過ON
 
-  // 録音開始で認識も開始（ユーザー操作内でstartする）
-  startBtn.addEventListener('click', () => {
-    try {
-      recog.start();
-      log('音声認識 start() 呼び出し');
-      safeSet(srStatus, '音声認識：開始');
-    } catch (e) {
-      log('recog.start() 失敗: ' + e.message);
-    }
-  });
+    const safeSet = (el, txt) => { if (el) el.textContent = txt; };
 
-  // 録音停止で認識も停止
-  stopBtn.addEventListener('click', () => {
-    try { recog.stop(); } catch(_) {}
-  });
+    recog.onstart = () => safeSet(srStatus, '音声認識：開始');
 
-  // 途中経過と確定結果を振り分け
-  recog.onstart = () => safeSet(srStatus, '音声認識：開始');
+    // 途中経過と確定結果を振り分け
+    recog.onresult = (ev) => {
+      let interim = '';
+      for (let i = ev.resultIndex; i < ev.results.length; i++) {
+        const res  = ev.results[i];
+        const text = (res[0] && res[0].transcript) ? res[0].transcript.trim() : '';
+        if (!text) continue;
 
-  recog.onresult = (ev) => {
-    let interim = '';
-    for (let i = ev.resultIndex; i < ev.results.length; i++) {
-      const res = ev.results[i];
-      const text = (res[0] && res[0].transcript) ? res[0].transcript.trim() : '';
-      if (!text) continue;
-
-      if (res.isFinal) {
-        // 確定：チャット欄へ
-        const div = document.createElement('div');
-        div.innerHTML = `<strong>User:</strong> ${text}`;
-        if (chatLog) {
-          chatLog.appendChild(div);
-          chatLog.scrollTop = chatLog.scrollHeight;
+        if (res.isFinal) {
+          const div = document.createElement('div');
+          div.innerHTML = `<strong>User:</strong> ${text}`;
+          chat.appendChild(div);
+          chat.scrollTop = chat.scrollHeight;
+          if (partial) partial.textContent = '';
+          log('onresult final: ' + text);
+        } else {
+          interim += text + ' ';
         }
-        if (partialEl) partialEl.textContent = ''; // 途中表示をクリア
-        log('onresult final: ' + text);
-      } else {
-        // 途中経過：partial に積む
-        interim += text + ' ';
       }
+      if (partial) partial.textContent = interim;
+    };
+
+    recog.onerror = (e) => {
+      log('音声認識エラー: ' + e.error);
+      // 無音で切れたとき等は録音中なら自動再開
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        try { recog.start(); } catch (_) {}
+      }
+    };
+
+    recog.onend = () => {
+      log('音声認識 end');
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        try { recog.start(); } catch (_) {}
+      } else {
+        safeSet(srStatus, '音声認識：待機');
+      }
+    };
+  }
+
+  // ---- MediaRecorder (録音) ----
+  startBtn.addEventListener('click', async () => {
+    try {
+      log('getUserMedia 要求…');
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      log('マイク取得 OK');
+
+      chunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'audio/webm' }); // Safari対策は必要なら別途
+        const url  = URL.createObjectURL(blob);
+        audio.src  = url;
+        log(`録音停止。サイズ=${blob.size} type=${blob.type}`);
+      };
+
+      mediaRecorder.start();
+      startBtn.disabled = true;
+      stopBtn.disabled  = false;
+      log(`録音開始 state=${mediaRecorder.state}`);
+
+      // 録音と同時に認識も開始（対応ブラウザのみ）
+      if (recog) {
+        try { recog.start(); } catch (_) {}
+      }
+    } catch (err) {
+      console.error(err);
+      log('マイク取得エラー: ' + err.message);
+      alert('マイク権限/HTTPS/端末設定を確認してください。');
     }
-    if (partialEl) partialEl.textContent = interim;
-  };
+  });
 
-  recog.onerror = (e) => {
-    log('音声認識エラー: ' + e.error);
-    // たまに "no-speech" などで勝手に止まるので、録音中なら再開
-    if (startBtn.disabled) {
-      try { recog.start(); } catch(_) {}
+  stopBtn.addEventListener('click', () => {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
     }
-  };
-
-  recog.onend = () => {
-    log('音声認識 end');
-    // 録音中なら自動再開（無音で終了したときの対策）
-    if (startBtn.disabled) {
-      try { recog.start(); } catch(_) {}
-    } else {
-      safeSet(srStatus, '音声認識：待機');
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+      stream = null;
     }
-  };
+    startBtn.disabled = false;
+    stopBtn.disabled  = true;
+    log('stop() 実行');
 
+    if (recog) {
+      try { recog.stop(); } catch (_) {}
+    }
+  });
 
-}
-  // 環境情報
+  // ---- env info ----
   log('UA: ' + navigator.userAgent);
   if (location.protocol !== 'https:') log('⚠️ HTTPSで開いてください（GitHub PagesはOK）');
 });
