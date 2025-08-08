@@ -12,11 +12,11 @@ window.addEventListener('DOMContentLoaded', () => {
   const startBtn = document.getElementById('startBtn');
   const stopBtn  = document.getElementById('stopBtn');
   const audio    = document.getElementById('audioPlayer');
-  const chatLog  = document.getElementById('chat');    // ← 確定表示はこっちに一本化
+  const chatLog  = document.getElementById('chat');    // ← 確定表示用
   const partialEl= document.getElementById('partial'); // ← 途中経過表示
   const srStatus = document.getElementById('srStatus');
 
-  if (!startBtn || !stopBtn || !audio || !chatLog) {
+if (!startBtn || !stopBtn || !audio || !chatLog) {
   alert('必要なDOMが足りません（startBtn/stopBtn/audioPlayer/chat）');
   return;
 }
