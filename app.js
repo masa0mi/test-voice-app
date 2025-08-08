@@ -12,12 +12,14 @@ window.addEventListener('DOMContentLoaded', () => {
   const startBtn = document.getElementById('startBtn');
   const stopBtn  = document.getElementById('stopBtn');
   const audio    = document.getElementById('audioPlayer');
-  const chat     = document.getElementById('chat');
+  const chatLog  = document.getElementById('chat');    // ← 確定表示はこっちに一本化
+  const partialEl= document.getElementById('partial'); // ← 途中経過表示
   const srStatus = document.getElementById('srStatus');
 
-  if (!startBtn || !stopBtn || !audio || !chat) {
-    alert('必要なDOMが足りません（startBtn/stopBtn/audioPlayer/chat）');
-    return;
+  if (!startBtn || !stopBtn || !audio || !chatLog) {
+  alert('必要なDOMが足りません（startBtn/stopBtn/audioPlayer/chat）');
+  return;
+}
   }
 
   // ---- recording ----
@@ -35,10 +37,6 @@ if (!SR) {
   recog.continuous = true;       // 継続認識
   recog.interimResults = true;   // 中間結果オン
 
-  const srStatusEl = document.getElementById('srStatus'); // もし無ければ無視
-  const partialEl  = document.getElementById('partial');
-  const chatLog    = document.getElementById('chat');
-
   const safeSet = (el, txt) => { if (el) el.textContent = txt; };
 
   // 録音開始で認識も開始（ユーザー操作内でstartする）
@@ -46,7 +44,7 @@ if (!SR) {
     try {
       recog.start();
       log('音声認識 start() 呼び出し');
-      safeSet(srStatusEl, '音声認識：開始');
+      safeSet(srStatus, '音声認識：開始');
     } catch (e) {
       log('recog.start() 失敗: ' + e.message);
     }
@@ -58,6 +56,8 @@ if (!SR) {
   });
 
   // 途中経過と確定結果を振り分け
+  recog.onstart = () => safeSet(srStatus, '音声認識：開始');
+
   recog.onresult = (ev) => {
     let interim = '';
     for (let i = ev.resultIndex; i < ev.results.length; i++) {
@@ -97,9 +97,11 @@ if (!SR) {
     if (startBtn.disabled) {
       try { recog.start(); } catch(_) {}
     } else {
-      safeSet(srStatusEl, '音声認識：待機');
+      safeSet(srStatus, '音声認識：待機');
     }
   };
+
+
 }
   // 環境情報
   log('UA: ' + navigator.userAgent);
