@@ -16,7 +16,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const audio     = $('audioPlayer');
   const chat      = $('chat');      // 確定結果の表示先（※ id は1つだけ）
   const partial   = $('partial');   // 途中経過の表示先（任意）
-  const srStatus  = $('srStatus');  // 認識状態表示（任意）
+ 
 
   if (!startBtn || !stopBtn || !audio || !chat) {
     alert('必要なDOMが足りません（startBtn / stopBtn / audioPlayer / chat）');
