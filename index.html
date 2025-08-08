@@ -5,10 +5,11 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Voice Test (Minimal)</title>
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 16px; }
-    .row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-    #log { white-space: pre-wrap; background:#111; color:#0f0; padding:8px; height:140px; overflow:auto; font-size:12px; }
+    body { font-family: system-ui,-apple-system,Segoe UI,Roboto,sans-serif; padding:16px; }
+    .row { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+    #log  { white-space:pre-wrap; background:#111; color:#0f0; padding:8px; height:140px; overflow:auto; font-size:12px; }
     #chat { border:1px solid #ccc; padding:8px; height:160px; overflow:auto; }
+    #partial { color:#666; margin:4px 0; min-height:1.2em; }
     button { padding:10px 14px; }
   </style>
 </head>
@@ -18,25 +19,22 @@
   <div class="row">
     <button id="startBtn">🎙️ 録音開始</button>
     <button id="stopBtn" disabled>⏹️ 録音停止</button>
+    <span id="srStatus">音声認識：待機</span> <!-- ← srStatus はこれ1つだけ -->
   </div>
-  <div class="row">
-  <button id="recogBtn">🧠 音声認識テスト</button>
-  <span id="srStatus"></span>
-  </div>
+
   <div class="row">
     <audio id="audioPlayer" controls playsinline></audio>
   </div>
-  
-  <h3>音声認識ログ</h3>
-  <!--<div id="partial" style="color:#666; margin: 4px 0;"></div>-->
-  <div id="result"></div>    <!-- 上の進行中表示用　-->
+
+  <h3>音声認識（途中経過）</h3>
+  <div id="partial"></div>
+
   <h3>チャット</h3>
-  <div id="chat"></div>      <!--　下の履歴表示用　-->
+  <div id="chat"></div>
 
   <h3>デバッグログ</h3>
   <div id="log"></div>
 
   <script src="app.js"></script>
-  <div id="srStatus">音声認識: 未初期化</div>
 </body>
 </html>
