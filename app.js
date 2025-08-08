@@ -25,6 +25,7 @@ if (!startBtn || !stopBtn || !audio || !chatLog) {
   // ---- recording ----
   let mediaRecorder = null;
   let chunks = [];
+  let stream = null;  
   let recording = false;
 
   // --- SpeechRecognition（音声認識：リアルタイム表示） ---
