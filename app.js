@@ -23,6 +23,31 @@ window.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
+    const srStatus = document.getElementById('srStatus');
+
+  if (!startBtn || !stopBtn || !audio || !chatLog) {
+    alert('必要なDOMが足りません（startBtn/stopBtn/audioPlayer/chat）');
+    return;
+  }
+
+  // --- 日本語用 簡易句読点・疑問符自動付加 ---
+  function jpAutoPunct(s) {
+    const t = s.trim();
+    if (!t) return t;
+
+    if (/[。．？！!?…]$/.test(t)) return t;
+
+    const qEnds = ['か', 'かい', 'かな', 'かね', 'かしら', 'でしょうか', 'ますか', 'ですか', 'でしょ？'];
+    if (qEnds.some(end => t.endsWith(end))) return t + '？';
+
+    if (/(ない|なかった|じゃない)$/.test(t)) return t + '？';
+
+    return t + '。';
+  }
+
+  // ---- recording ----
+  let mediaRecorder = null;
+  
   // ---- recording state ----
   let mediaRecorder = null;
   let chunks = [];
@@ -55,7 +80,8 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!txt) continue;
 
     if (res.isFinal) {
-      finalTexts.push(txt);
+      const punctuated = jpAutoPunct(txt); // ← 句読点処理
+      finalTexts.push(punctuated);
     } else {
       interimText += txt + ' ';
     }
