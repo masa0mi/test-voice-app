@@ -1,17 +1,86 @@
-
 <!DOCTYPE html>
-<html lang="ja">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aurora UI Phase 1</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <title>録音テストアプリ</title>
 </head>
 <body>
-    <h1>🌌 Aurora UI - Phase 1</h1>
-    <p>リアルタイム会話機能準備中…</p>
-    <button onclick="startRecording()">🎙 音声録音開始</button>
-    <button onclick="stopRecording()">⏹ 停止</button>
-    <script src="main.js"></script>
+  <h1>🎤 音声録音テスト</h1>
+  <button id="startBtn">録音開始</button>
+  <button id="stopBtn" disabled>録音停止</button>
+  <p id="status">📄 状態: 待機中</p>
+  <audio id="audioPlayer" controls></audio>
+  <div id="levelDisplay" style="width: 200px; height: 10px; background: #eee; margin-top: 10px;">
+    <div id="levelBar" style="height: 100%; width: 0; background: green;"></div>
+  </div>
+
+  <script>
+    let mediaRecorder;
+    let audioChunks = [];
+    let audioContext;
+    let analyser;
+    let source;
+    let animationId;
+
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const status = document.getElementById('status');
+    const audioPlayer = document.getElementById('audioPlayer');
+    const levelBar = document.getElementById('levelBar');
+
+    startBtn.onclick = async () => {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      audioChunks = [];
+
+      mediaRecorder.ondataavailable = e => {
+        audioChunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(audioChunks, { type: 'audio/webm' });
+        const url = URL.createObjectURL(blob);
+        audioPlayer.src = url;
+        audioPlayer.play();
+        stopVisualizer();
+      };
+
+      mediaRecorder.start();
+      status.textContent = "🔴 録音中...";
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+
+      // 音量表示の準備
+      audioContext = new AudioContext();
+      source = audioContext.createMediaStreamSource(stream);
+      analyser = audioContext.createAnalyser();
+      source.connect(analyser);
+      analyser.fftSize = 256;
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+      function updateVisualizer() {
+        analyser.getByteFrequencyData(dataArray);
+        const volume = Math.max(...dataArray);
+        levelBar.style.width = `${(volume / 255) * 100}%`;
+        animationId = requestAnimationFrame(updateVisualizer);
+      }
+
+      updateVisualizer();
+    };
+
+    stopBtn.onclick = () => {
+      if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+        status.textContent = "🟡 録音停止";
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+      }
+    };
+
+    function stopVisualizer() {
+      cancelAnimationFrame(animationId);
+      levelBar.style.width = "0";
+    }
+  </script>
 </body>
 </html>
