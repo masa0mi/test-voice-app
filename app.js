@@ -88,7 +88,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   // 途中経過を常に表示
-  if (partialEl) partialEl.textContent = interimText;
+  if (partial) partial.textContent = interimText;
 
   // 確定はチャット欄へ。積んだら途中経過はクリア
   if (finalTexts.length && chatLog) {
