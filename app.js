@@ -20,7 +20,7 @@ if (!startBtn || !stopBtn || !audio || !chatLog) {
   alert('必要なDOMが足りません（startBtn/stopBtn/audioPlayer/chat）');
   return;
 }
-};
+}
 
   // ---- recording ----
   let mediaRecorder = null;
